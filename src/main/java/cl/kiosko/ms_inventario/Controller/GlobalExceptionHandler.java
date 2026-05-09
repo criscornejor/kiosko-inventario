@@ -2,6 +2,7 @@ package cl.kiosko.ms_inventario.Controller;
 
 import cl.kiosko.ms_inventario.DTO.ExceptionDTO;
 import cl.kiosko.ms_inventario.Exception.ProductoNoEncontradoException;
+import cl.kiosko.ms_inventario.Exception.CategoriaNoEncontradaException;
 import cl.kiosko.ms_inventario.Exception.StockInsuficienteException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ import java.util.NoSuchElementException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({NoSuchElementException.class, ProductoNoEncontradoException.class})
+    @ExceptionHandler({NoSuchElementException.class, ProductoNoEncontradoException.class, CategoriaNoEncontradaException.class})
     public ResponseEntity<ExceptionDTO> handleNotFound(Exception ex){
         ExceptionDTO exceptionDTO = new ExceptionDTO(
                 HttpStatus.NOT_FOUND,
