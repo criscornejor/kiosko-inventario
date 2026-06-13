@@ -67,3 +67,16 @@ Se pueden crear productos duplicados con el mismo código de barras, lo cual rom
 3. Migración V2 con UNIQUE en `codigo_barras` (+ endpoint de búsqueda por código).
 4. Externalizar credenciales.
 5. Tests del servicio de inventario.
+
+## Correcciones aplicadas (2026-06-12)
+
+1. **Stock concurrente**: `descontarStock` ahora usa `findByIdForUpdate` con `@Lock(PESSIMISTIC_WRITE)` (`SELECT ... FOR UPDATE`), y la cantidad se valida con `@Min(1)` en el controller.
+2. **Exception handler**: errores internos devuelven 500 con mensaje genérico (se loguean con stacktrace); `DataIntegrityViolationException` devuelve 409 sin exponer SQL crudo; se agregó handler para `HandlerMethodValidationException` (validación de parámetros).
+3. **Código de barras**: migración `V2__unique_codigo_barras.sql` con constraint UNIQUE, `unique = true` en la entidad, y nuevo endpoint `GET /v1/kiosko/inventario/productos/codigo-barras/{codigoBarras}`.
+4. **Configuración**: credenciales y URL de BD externalizadas (`DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, con defaults para desarrollo local).
+5. **Tests**: `InventarioServiceTest` con 10 tests unitarios (Mockito) cubriendo descuento de stock, stock insuficiente, búsquedas y creación de producto — todos en verde.
+6. Extra: se corrigió el tipo de excepción al crear/actualizar producto con categoría inexistente (`CategoriaNoEncontradaException` en vez de `ProductoNoEncontradoException`).
+
+**Advertencia de despliegue:** si la base de datos existente tiene códigos de barras duplicados, la migración V2 fallará al aplicar el UNIQUE; hay que depurar los duplicados antes.
+
+**Pendientes (no aplicados):** reemplazo de `@Data` en entidades, N+1 en listado paginado, Actuator/OpenAPI, formato ISO en `ExceptionDTO`, renombrar paquetes a minúsculas, `POST` para descontar-stock.

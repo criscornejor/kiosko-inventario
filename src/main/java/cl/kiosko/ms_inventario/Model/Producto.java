@@ -26,7 +26,7 @@ public class Producto {
     @NotBlank(message = "El nombre del producto no puede estar en blanco")
     private String nombre;
 
-    @Column(length = 100, nullable = false)
+    @Column(length = 100, nullable = false, unique = true)
     @NotBlank(message = "El código de barras no puede estar en blanco")
     private String codigoBarras;
 

@@ -3,6 +3,7 @@ package cl.kiosko.ms_inventario.Service;
 import cl.kiosko.ms_inventario.DTO.CategoriaResponseDTO;
 import cl.kiosko.ms_inventario.DTO.ProductoRequestDTO;
 import cl.kiosko.ms_inventario.DTO.ProductoResponseDTO;
+import cl.kiosko.ms_inventario.Exception.CategoriaNoEncontradaException;
 import cl.kiosko.ms_inventario.Exception.ProductoNoEncontradoException;
 import cl.kiosko.ms_inventario.Exception.StockInsuficienteException;
 import cl.kiosko.ms_inventario.Model.Categoria;
@@ -57,7 +58,7 @@ public class InventarioService {
     public ProductoResponseDTO crearProducto(ProductoRequestDTO requestDTO) {
         log.info("Iniciando creación de producto: {}", requestDTO.getNombre());
         Categoria categoria = categoriaRepository.findById(requestDTO.getCategoriaId())
-                .orElseThrow(() -> new ProductoNoEncontradoException("Categoría no encontrada con id: " + requestDTO.getCategoriaId()));
+                .orElseThrow(() -> new CategoriaNoEncontradaException("Categoría no encontrada con id: " + requestDTO.getCategoriaId()));
 
         Producto producto = new Producto();
         producto.setNombre(requestDTO.getNombre());
@@ -85,7 +86,7 @@ public class InventarioService {
                 .orElseThrow(() -> new ProductoNoEncontradoException("Producto no encontrado con id: " + id));
 
         Categoria categoria = categoriaRepository.findById(requestDTO.getCategoriaId())
-                .orElseThrow(() -> new ProductoNoEncontradoException("Categoría no encontrada con id: " + requestDTO.getCategoriaId()));
+                .orElseThrow(() -> new CategoriaNoEncontradaException("Categoría no encontrada con id: " + requestDTO.getCategoriaId()));
 
         producto.setNombre(requestDTO.getNombre());
         producto.setCodigoBarras(requestDTO.getCodigoBarras());
@@ -115,6 +116,19 @@ public class InventarioService {
     }
 
     /**
+     * Busca un producto por su código de barras (flujo de caja/escaneo).
+     * @param codigoBarras Código de barras del producto
+     * @return ProductoResponseDTO
+     */
+    @Transactional(readOnly = true)
+    public ProductoResponseDTO obtenerProductoPorCodigoBarras(String codigoBarras) {
+        log.info("Buscando producto con código de barras: {}", codigoBarras);
+        Producto producto = productoRepository.findByCodigoBarras(codigoBarras)
+                .orElseThrow(() -> new ProductoNoEncontradoException("Producto no encontrado con código de barras: " + codigoBarras));
+        return mapToResponseDTO(producto);
+    }
+
+    /**
      * Verifica la cantidad de stock disponible para un producto.
      * @param id Identificador del producto
      * @return Cantidad de stock actual
@@ -136,7 +150,7 @@ public class InventarioService {
     @Transactional
     public void descontarStock(Long id, Integer cantidad) {
         log.info("Intentando descontar {} unidades del producto ID: {}", cantidad, id);
-        Producto producto = productoRepository.findById(id)
+        Producto producto = productoRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ProductoNoEncontradoException("Producto no encontrado con id: " + id));
 
         if (producto.getStockActual() < cantidad) {

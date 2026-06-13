@@ -4,6 +4,7 @@ import cl.kiosko.ms_inventario.DTO.ProductoRequestDTO;
 import cl.kiosko.ms_inventario.DTO.ProductoResponseDTO;
 import cl.kiosko.ms_inventario.Service.InventarioService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -85,11 +86,23 @@ public class ControllerInventario {
     /**
      * Descuenta stock de un producto (generalmente llamado por ms-ventas).
      * @param id ID del producto
-     * @param cantidad Cantidad a descontar
+     * @param cantidad Cantidad a descontar (mínimo 1)
      */
     @PutMapping("/{id}/descontar-stock")
-    public ResponseEntity<Void> descontarStock(@PathVariable Long id, @RequestParam Integer cantidad) {
+    public ResponseEntity<Void> descontarStock(
+            @PathVariable Long id,
+            @RequestParam @Min(value = 1, message = "La cantidad a descontar debe ser al menos 1") Integer cantidad) {
         inventarioService.descontarStock(id, cantidad);
         return ResponseEntity.ok().build();
+    }
+
+    /**
+     * Busca un producto por su código de barras (flujo de caja/escaneo).
+     * @param codigoBarras Código de barras
+     * @return Producto encontrado
+     */
+    @GetMapping("/codigo-barras/{codigoBarras}")
+    public ResponseEntity<ProductoResponseDTO> obtenerProductoPorCodigoBarras(@PathVariable String codigoBarras) {
+        return ResponseEntity.ok(inventarioService.obtenerProductoPorCodigoBarras(codigoBarras));
     }
 }
