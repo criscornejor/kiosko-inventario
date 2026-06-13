@@ -10,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping("v1/kiosko/inventario/categorias")
@@ -20,22 +22,35 @@ public class ControllerCategoria {
 
     @PostMapping
     public ResponseEntity<CategoriaResponseDTO> crearCategoria(@Valid @RequestBody CategoriaRequestDTO requestDTO) {
-        return new ResponseEntity<>(categoriaService.crearCategoria(requestDTO), HttpStatus.CREATED);
+        CategoriaResponseDTO response = categoriaService.crearCategoria(requestDTO);
+        response.add(linkTo(methodOn(ControllerCategoria.class).obtenerCategoriaPorId(response.getId())).withSelfRel());
+        response.add(linkTo(methodOn(ControllerCategoria.class).obtenerCategorias(null)).withRel("categorias"));
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping
     public ResponseEntity<Page<CategoriaResponseDTO>> obtenerCategorias(Pageable pageable) {
-        return ResponseEntity.ok(categoriaService.obtenerCategorias(pageable));
+        Page<CategoriaResponseDTO> categorias = categoriaService.obtenerCategorias(pageable);
+        categorias.forEach(categoria -> 
+            categoria.add(linkTo(methodOn(ControllerCategoria.class).obtenerCategoriaPorId(categoria.getId())).withSelfRel())
+        );
+        return ResponseEntity.ok(categorias);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<CategoriaResponseDTO> obtenerCategoriaPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(categoriaService.obtenerCategoriaPorId(id));
+        CategoriaResponseDTO response = categoriaService.obtenerCategoriaPorId(id);
+        response.add(linkTo(methodOn(ControllerCategoria.class).obtenerCategoriaPorId(id)).withSelfRel());
+        response.add(linkTo(methodOn(ControllerCategoria.class).obtenerCategorias(null)).withRel("categorias"));
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<CategoriaResponseDTO> actualizarCategoria(@PathVariable Long id, @Valid @RequestBody CategoriaRequestDTO requestDTO) {
-        return ResponseEntity.ok(categoriaService.actualizarCategoria(id, requestDTO));
+        CategoriaResponseDTO response = categoriaService.actualizarCategoria(id, requestDTO);
+        response.add(linkTo(methodOn(ControllerCategoria.class).obtenerCategoriaPorId(id)).withSelfRel());
+        response.add(linkTo(methodOn(ControllerCategoria.class).obtenerCategorias(null)).withRel("categorias"));
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")

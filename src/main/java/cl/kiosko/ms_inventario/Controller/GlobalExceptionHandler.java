@@ -60,9 +60,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ExceptionDTO> handleGlobalException(Exception ex){
         ExceptionDTO exceptionDTO = new ExceptionDTO(
-                HttpStatus.BAD_REQUEST,
+                HttpStatus.INTERNAL_SERVER_ERROR,
                 ex
         );
-        return new ResponseEntity<>(exceptionDTO, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(exceptionDTO, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-}
+}

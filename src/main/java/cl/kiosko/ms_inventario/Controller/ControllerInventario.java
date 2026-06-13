@@ -10,6 +10,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 /**
  * Controlador REST para gestionar el inventario de productos.
@@ -28,7 +30,10 @@ public class ControllerInventario {
      */
     @PostMapping
     public ResponseEntity<ProductoResponseDTO> crearProducto(@Valid @RequestBody ProductoRequestDTO requestDTO) {
-        return new ResponseEntity<>(inventarioService.crearProducto(requestDTO), HttpStatus.CREATED);
+        ProductoResponseDTO response = inventarioService.crearProducto(requestDTO);
+        response.add(linkTo(methodOn(ControllerInventario.class).obtenerProductoPorId(response.getId())).withSelfRel());
+        response.add(linkTo(methodOn(ControllerInventario.class).obtenerProductos(null)).withRel("productos"));
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     /**
@@ -38,7 +43,11 @@ public class ControllerInventario {
      */
     @GetMapping
     public ResponseEntity<Page<ProductoResponseDTO>> obtenerProductos(Pageable pageable) {
-        return ResponseEntity.ok(inventarioService.obtenerProductos(pageable));
+        Page<ProductoResponseDTO> productos = inventarioService.obtenerProductos(pageable);
+        productos.forEach(producto -> 
+            producto.add(linkTo(methodOn(ControllerInventario.class).obtenerProductoPorId(producto.getId())).withSelfRel())
+        );
+        return ResponseEntity.ok(productos);
     }
 
     /**
@@ -48,7 +57,10 @@ public class ControllerInventario {
      */
     @GetMapping("/{id}")
     public ResponseEntity<ProductoResponseDTO> obtenerProductoPorId(@PathVariable Long id) {
-        return ResponseEntity.ok(inventarioService.obtenerProductoPorId(id));
+        ProductoResponseDTO response = inventarioService.obtenerProductoPorId(id);
+        response.add(linkTo(methodOn(ControllerInventario.class).obtenerProductoPorId(id)).withSelfRel());
+        response.add(linkTo(methodOn(ControllerInventario.class).obtenerProductos(null)).withRel("productos"));
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -59,7 +71,10 @@ public class ControllerInventario {
      */
     @PutMapping("/{id}")
     public ResponseEntity<ProductoResponseDTO> actualizarProducto(@PathVariable Long id, @Valid @RequestBody ProductoRequestDTO requestDTO) {
-        return ResponseEntity.ok(inventarioService.actualizarProducto(id, requestDTO));
+        ProductoResponseDTO response = inventarioService.actualizarProducto(id, requestDTO);
+        response.add(linkTo(methodOn(ControllerInventario.class).obtenerProductoPorId(id)).withSelfRel());
+        response.add(linkTo(methodOn(ControllerInventario.class).obtenerProductos(null)).withRel("productos"));
+        return ResponseEntity.ok(response);
     }
 
     /**
