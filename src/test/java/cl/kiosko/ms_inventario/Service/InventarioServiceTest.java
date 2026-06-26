@@ -1,5 +1,6 @@
 package cl.kiosko.ms_inventario.Service;
 
+import cl.kiosko.ms_inventario.Client.NotificacionesClient;
 import cl.kiosko.ms_inventario.DTO.ProductoRequestDTO;
 import cl.kiosko.ms_inventario.DTO.ProductoResponseDTO;
 import cl.kiosko.ms_inventario.Exception.ProductoNoEncontradoException;
@@ -31,6 +32,9 @@ class InventarioServiceTest {
     @Mock
     private CategoriaRepository categoriaRepository;
 
+    @Mock
+    private NotificacionesClient notificacionesClient;
+
     @InjectMocks
     private InventarioService inventarioService;
 
@@ -56,13 +60,10 @@ class InventarioServiceTest {
 
     @Test
     void obtenerProductoPorId_Exito() {
-        // Arrange
         when(productoRepository.findById(10L)).thenReturn(Optional.of(productoMock));
 
-        // Act
         ProductoResponseDTO response = inventarioService.obtenerProductoPorId(10L);
 
-        // Assert
         assertNotNull(response);
         assertEquals("Coca Cola", response.getNombre());
         assertEquals("Bebidas", response.getCategoria().getNombre());
@@ -71,19 +72,14 @@ class InventarioServiceTest {
 
     @Test
     void obtenerProductoPorId_NoEncontrado() {
-        // Arrange
         when(productoRepository.findById(anyLong())).thenReturn(Optional.empty());
 
-        // Act & Assert
-        assertThrows(ProductoNoEncontradoException.class, () -> {
-            inventarioService.obtenerProductoPorId(99L);
-        });
+        assertThrows(ProductoNoEncontradoException.class, () -> inventarioService.obtenerProductoPorId(99L));
         verify(productoRepository, times(1)).findById(99L);
     }
 
     @Test
     void crearProducto_Exito() {
-        // Arrange
         ProductoRequestDTO requestDTO = new ProductoRequestDTO();
         requestDTO.setNombre("Sprite");
         requestDTO.setCodigoBarras("54321");
@@ -93,7 +89,7 @@ class InventarioServiceTest {
         requestDTO.setCategoriaId(1L);
 
         when(categoriaRepository.findById(1L)).thenReturn(Optional.of(categoriaMock));
-        
+
         Producto productoGuardado = new Producto();
         productoGuardado.setId(11L);
         productoGuardado.setNombre("Sprite");
@@ -105,10 +101,8 @@ class InventarioServiceTest {
 
         when(productoRepository.save(any(Producto.class))).thenReturn(productoGuardado);
 
-        // Act
         ProductoResponseDTO response = inventarioService.crearProducto(requestDTO);
 
-        // Assert
         assertNotNull(response);
         assertEquals(11L, response.getId());
         assertEquals("Sprite", response.getNombre());
@@ -118,27 +112,20 @@ class InventarioServiceTest {
 
     @Test
     void descontarStock_Exito() {
-        // Arrange
         when(productoRepository.findById(10L)).thenReturn(Optional.of(productoMock));
         when(productoRepository.save(any(Producto.class))).thenReturn(productoMock);
 
-        // Act
         inventarioService.descontarStock(10L, 5);
 
-        // Assert
         assertEquals(15, productoMock.getStockActual());
         verify(productoRepository, times(1)).save(productoMock);
     }
 
     @Test
     void descontarStock_StockInsuficiente() {
-        // Arrange
         when(productoRepository.findById(10L)).thenReturn(Optional.of(productoMock));
 
-        // Act & Assert
-        assertThrows(StockInsuficienteException.class, () -> {
-            inventarioService.descontarStock(10L, 25);
-        });
+        assertThrows(StockInsuficienteException.class, () -> inventarioService.descontarStock(10L, 25));
         verify(productoRepository, never()).save(any(Producto.class));
     }
 }

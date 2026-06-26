@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -44,7 +45,7 @@ public class ControllerInventario {
     @GetMapping
     public ResponseEntity<Page<ProductoResponseDTO>> obtenerProductos(Pageable pageable) {
         Page<ProductoResponseDTO> productos = inventarioService.obtenerProductos(pageable);
-        productos.forEach(producto -> 
+        productos.forEach(producto ->
             producto.add(linkTo(methodOn(ControllerInventario.class).obtenerProductoPorId(producto.getId())).withSelfRel())
         );
         return ResponseEntity.ok(productos);
@@ -103,8 +104,10 @@ public class ControllerInventario {
      * @param cantidad Cantidad a descontar
      */
     @PutMapping("/{id}/descontar-stock")
-    public ResponseEntity<Void> descontarStock(@PathVariable Long id, @RequestParam Integer cantidad) {
-        inventarioService.descontarStock(id, cantidad);
+    public ResponseEntity<Void> descontarStock(@PathVariable Long id,
+                                                @RequestParam Integer cantidad,
+                                                @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader) {
+        inventarioService.descontarStock(id, cantidad, authorizationHeader);
         return ResponseEntity.ok().build();
     }
 }

@@ -1,5 +1,6 @@
 package cl.kiosko.ms_inventario.Service;
 
+import cl.kiosko.ms_inventario.Client.NotificacionesClient;
 import cl.kiosko.ms_inventario.DTO.CategoriaResponseDTO;
 import cl.kiosko.ms_inventario.DTO.ProductoRequestDTO;
 import cl.kiosko.ms_inventario.DTO.ProductoResponseDTO;
@@ -11,6 +12,7 @@ import cl.kiosko.ms_inventario.Repository.CategoriaRepository;
 import cl.kiosko.ms_inventario.Repository.ProductoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,23 +25,17 @@ public class InventarioService {
 
     private final ProductoRepository productoRepository;
     private final CategoriaRepository categoriaRepository;
+    private final NotificacionesClient notificacionesClient;
 
-    /**
-     * Obtiene una lista paginada de productos.
-     * @param pageable Configuración de paginación
-     * @return Página de ProductoResponseDTO
-     */
+    @Value("${app.alertas.stock.destinatario:}")
+    private String destinatarioAlertasStock;
+
     @Transactional(readOnly = true)
     public Page<ProductoResponseDTO> obtenerProductos(Pageable pageable) {
         log.info("Obteniendo lista de productos (paginada)");
         return productoRepository.findAll(pageable).map(this::mapToResponseDTO);
     }
 
-    /**
-     * Obtiene un producto específico por su ID.
-     * @param id Identificador del producto
-     * @return ProductoResponseDTO
-     */
     @Transactional(readOnly = true)
     public ProductoResponseDTO obtenerProductoPorId(Long id) {
         log.info("Buscando producto con ID: {}", id);
@@ -48,11 +44,6 @@ public class InventarioService {
         return mapToResponseDTO(producto);
     }
 
-    /**
-     * Crea un nuevo producto validando la categoría existente.
-     * @param requestDTO Datos del producto a crear
-     * @return ProductoResponseDTO
-     */
     @Transactional
     public ProductoResponseDTO crearProducto(ProductoRequestDTO requestDTO) {
         log.info("Iniciando creación de producto: {}", requestDTO.getNombre());
@@ -72,12 +63,6 @@ public class InventarioService {
         return mapToResponseDTO(guardado);
     }
 
-    /**
-     * Actualiza un producto existente.
-     * @param id Identificador del producto
-     * @param requestDTO Nuevos datos del producto
-     * @return ProductoResponseDTO
-     */
     @Transactional
     public ProductoResponseDTO actualizarProducto(Long id, ProductoRequestDTO requestDTO) {
         log.info("Actualizando producto con ID: {}", id);
@@ -99,10 +84,6 @@ public class InventarioService {
         return mapToResponseDTO(actualizado);
     }
 
-    /**
-     * Elimina lógicamente/físicamente un producto.
-     * @param id Identificador del producto
-     */
     @Transactional
     public void eliminarProducto(Long id) {
         log.info("Eliminando producto con ID: {}", id);
@@ -114,11 +95,6 @@ public class InventarioService {
         log.info("Producto ID {} eliminado", id);
     }
 
-    /**
-     * Verifica la cantidad de stock disponible para un producto.
-     * @param id Identificador del producto
-     * @return Cantidad de stock actual
-     */
     @Transactional(readOnly = true)
     public Integer verificarStock(Long id) {
         log.info("Verificando stock para el producto ID: {}", id);
@@ -127,14 +103,13 @@ public class InventarioService {
         return producto.getStockActual();
     }
 
-    /**
-     * Descuenta una cantidad del stock actual si es posible.
-     * Genera alerta (warning) si el stock queda por debajo del mínimo.
-     * @param id Identificador del producto
-     * @param cantidad Cantidad a descontar
-     */
     @Transactional
     public void descontarStock(Long id, Integer cantidad) {
+        descontarStock(id, cantidad, null);
+    }
+
+    @Transactional
+    public void descontarStock(Long id, Integer cantidad, String authorizationHeader) {
         log.info("Intentando descontar {} unidades del producto ID: {}", cantidad, id);
         Producto producto = productoRepository.findById(id)
                 .orElseThrow(() -> new ProductoNoEncontradoException("Producto no encontrado con id: " + id));
@@ -148,16 +123,17 @@ public class InventarioService {
         productoRepository.save(producto);
 
         if (producto.getStockActual() < producto.getStockMinimo()) {
-            log.warn("ALERTA DE STOCK: Producto ID {} ha caído por debajo del stock mínimo. Stock Actual: {}, Mínimo: {}", 
+            log.warn("ALERTA DE STOCK: Producto ID {} ha caído por debajo del stock mínimo. Stock Actual: {}, Mínimo: {}",
                     id, producto.getStockActual(), producto.getStockMinimo());
-            // Aquí se podría publicar un evento para ms-notificaciones
+            notificacionesClient.enviarAlertaStock(
+                    destinatarioAlertasStock,
+                    producto.getNombre(),
+                    producto.getStockActual(),
+                    authorizationHeader);
         }
         log.info("Descuento exitoso. Nuevo stock para producto ID {}: {}", id, producto.getStockActual());
     }
 
-    /**
-     * Utilidad para mapear de Producto a ProductoResponseDTO
-     */
     private ProductoResponseDTO mapToResponseDTO(Producto producto) {
         CategoriaResponseDTO catDTO = new CategoriaResponseDTO(
                 producto.getCategoria().getId(),
